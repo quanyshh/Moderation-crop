@@ -1,0 +1,505 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <!--link rel="icon" href="../../../../favicon.ico"-->
+
+    <title>Nomeroff Net. Automatic numberplate recognition system from RIA.com</title>
+
+    <!-- BootstrapCDN -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <script src="https://rawgit.com/google/code-prettify/master/loader/run_prettify.js?autoload=true&amp;lang=css" defer></script>
+    <link rel="stylesheet" href="croppie.css" />
+    <script src="croppie.js"></script>
+    <!-- Custom styles for this template -->
+    <style>
+        body { padding-bottom: 20px; }
+        .navbar { margin-bottom: 20px; }
+        .logo { margin-top: 40px; margin-bottom: 60px; }
+        .operative { font-weight: bold; border: 1px solid yellow; }
+        #quine { border: 4px solid #88c; }
+
+        div.editNumberplate {padding-bottom: 5px; font-size: 3rem; letter-spacing: 5px;}
+        input.numberplate {width: 295px}
+        div.edited { color: green }
+        tr.forDelete {
+            background-color: #f77 !important;
+        }
+        td.deleteTD {
+            width: 10px;
+        }
+        td h1 {
+            height: 48px;
+        }
+        p.warnings {
+            color: #f44;
+        }
+        input.NewNumber {
+            letter-spacing: 5px;
+            background: white;
+            display: block;
+            border: 0;
+            padding: 0;
+            text-align: center;
+            font-size: 33pt;
+            margin: auto;
+        }
+        select.seledited {
+            color:green;
+        }
+        p.predicted {
+            font-size: 15pt;
+        }
+    </style>
+</head>
+
+<body>
+
+
+<div class="container">
+    <nav class="navbar navbar-expand-lg navbar-light bg-light rounded">
+        <a class="navbar-brand" href="#">OCR Moderation</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarsExample09" aria-controls="navbarsExample09" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarsExample09">
+            <ul class="navbar-nav mr-auto">
+                <li class="nav-item active">
+                    <a class="nav-link" href="/">Setup</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <main role="main">
+        <div style="color: silver;" id="infoBox"></div>
+        <div class="jumbotron">
+            <div class="col-sm-10 mx-auto">
+                <table class="table table-striped" id="npsTable"><tbody/></table>
+                <form>
+                    <input type="submit" name="reset" value="Reset" id="reset" class="btn" />
+                    <input type="submit" name="loadNext" value="Save & Load Next" id="loadNext" class="btn btn-primary" />
+                </form>
+
+            </div>
+        </div>
+    </main>
+</div>
+<!-- Bootstrap core JavaScript
+================================================== -->
+<!-- Placed at the end of the document so the pages load faster -->
+
+<script src="https://code.jquery.com/jquery-3.2.1.js" integrity="sha256-DZAnKJ/6XZ9si04Hgrsxu/8s717jcIzLy3oi35EouyE=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+
+<script>
+    
+    function drawCat(current, ownoptval, options, label) {
+
+        var p = document.createElement("p");
+        var N = options.length;
+        var select = document.createElement("select");
+        select.dataset.options = ownoptval;
+        select.addEventListener("blur", function(e){
+            if (e.target[e.target.selectedIndex].value != e.target.dataset.options) {
+                e.target.className += " seledited";
+            }
+        });
+
+        var labelOption = document.createElement("option");
+        var text = document.createTextNode(label);
+        labelOption.appendChild(text);
+        labelOption.disabled = "disabled";
+        if (ownoptval == undefined ) {
+            labelOption.selected = "selected";
+        }
+        labelOption.value = 0;
+        select.appendChild(labelOption);
+
+        for (var i=0; i < N; i++) {
+            var option = document.createElement("option");
+            option.value = i;
+            if (ownoptval == i) {
+                option.selected = "selected";
+            }
+            var text = document.createTextNode(options[i]);
+            option.appendChild(text);
+            select.appendChild(option);
+        }
+        p.appendChild(select);
+        current.appendChild(p);
+    }
+    function npH1Redraw(div, disc) {
+        var h1 = document.createElement("h1");
+        var h1Text = document.createTextNode(disc);
+        h1.appendChild(h1Text);
+
+        div.appendChild(h1);
+    }
+    function getText(file_name) {
+        
+
+        var reader = new FileReader();
+        reader.onload = function(){
+          var text = reader.result;
+          var node = document.getElementById('output');
+          node.innerText = text;
+          console.log(reader.result.substring(0, 200));
+        };
+        reader.readAsText(file_name);
+      
+        
+
+    }
+
+    
+
+    function npInputRedraw(div, currentDesc) {
+        while (div.firstChild) {
+            div.removeChild(div.firstChild);
+        }
+        npH1Redraw(div, currentDesc)
+    }
+
+    $( document ).ready(function() {
+        // CONFIG DATA
+        var USER = "defaultUser";
+        var dic = {'10_0': 'Казахстан', '10_21': 'Россия', '10_1': 'Белоруссия', '10_22': 'Украина', '10_2': 'Киргизия', '10_23': 'Абхазия', '10_3': 'Таджикистан', '10_24': 'Южная Осетия', '10_4': 'Узбекистан', '10_25': 'Молдавия', '10_5': 'Астана', '10_26': 'Акмолинская', '10_6': 'Алматы', '10_27': 'Алматинская', '10_7': 'Актау', '10_28': 'Мангистауская', '10_8': 'Актобе', '10_29': 'Актюбинская', '10_9': 'Атырау', '10_30': 'Атырауская', '10_10': 'Караганда', '10_31': 'Карагандинская', '10_11': 'Костанай', '10_32': 'Костанайская', '10_12': 'Кызылорда', '10_33': 'Кызылординская', '10_13': 'Павлодар', '10_34': 'Павлодарская', '10_14': 'Петропавловск', '10_35': 'Северно-Казахстанская', '10_15': 'Семей', '10_36': 'Восточно-Казахстанская', '10_16': 'Тараз', '10_37': 'Жамбыльская', '10_17': 'Уральск', '10_38': 'Западно-Казахстанская', '10_18': 'Туркестан', '10_39': 'Туркестанская', '10_19': 'Кокшетау', '10_40': 'Усть-Каменогорск', '10_20': 'Шымкент', '10_41': 'Южно-Казахстанская', '11_0': 'Республика', '11_26': 'Восточно-Казахстанская', '11_1': 'республика', '11_27': 'Западно-Казахстанская', '11_2': 'Казахстан', '11_28': 'Южно-Казахстанская', '11_3': 'казахстан', '11_29': 'Северо-Казахстанская', '11_4': 'РК', '11_30': 'Карагандинская', '11_5': 'Область', '11_31': 'Павлодарская', '11_6': 'область', '11_32': 'Кызылординская', '11_7': 'обл', '11_33': 'Мангистауская', '11_8': 'обл.', '11_34': 'Костанайская', '11_9': 'город', '11_35': 'Астана', '11_10': 'г.', '11_36': 'Абай', '11_11': 'Район', '11_37': 'Акколь', '11_12': 'район', '11_38': 'Аксай', '11_13': 'р-н', '11_39': 'Аксу', '11_14': 'Село', '11_40': 'Актау', '11_15': 'село', '11_41': 'Актобе', '11_16': 'с.', '11_42': 'Алга', '11_17': 'Поселок', '11_43': 'Алматы', '11_18': 'поселок', '11_44': 'Аральск', '11_19': 'п.', '11_45': 'Аркалык', '11_20': 'Атырауская', '11_46': 'Арысь', '11_21': 'Алматинская', '11_47': 'Атбасар', '11_22': 'Актюбинская', '11_48': 'Атырау', '11_23': 'Акмолинская', '11_49': 'Балхаш', '11_24': 'Жамбылская', '11_50': 'Байконыр', '11_25': 'Аягоз', '11_51': 'Булаево', '12_0': 'Державинск', '12_26': 'Кызылорда', '12_1': 'Ерейментау', '12_27': 'Ленгер', '12_2': 'Есик', '12_28': 'Лисаковск', '12_3': 'Есиль', '12_29': 'Макинск', '12_4': 'Жанаозен', '12_30': 'Мамлютка', '12_5': 'Жанатас', '12_31': 'Павлодар', '12_6': 'Жаркент', '12_32': 'Петропавловск', '12_7': 'Жезказган', '12_33': 'Приозерск', '12_8': 'Жем', '12_34': 'Риддер', '12_9': 'Жетысай', '12_35': 'Рудный', '12_10': 'Житикара', '12_36': 'Сарань', '12_11': 'Зайсан', '12_37': 'Сарканд', '12_12': 'Зыряновск', '12_38': 'Сарыагаш', '12_13': 'Казалинск', '12_39': 'Сатпаев', '12_14': 'Кандыагаш', '12_40': 'Семей', '12_15': 'Капчагай', '12_41': 'Сергеевка', '12_16': 'Караганда', '12_42': 'Серебрянск', '12_17': 'Каражал', '12_43': 'Степногорск', '12_18': 'Каратау', '12_44': 'Степняк', '12_19': 'Каркаралинск', '12_45': 'Тайынша', '12_20': 'Каскелен', '12_46': 'Талгар', '12_21': 'Кентау', '12_47': 'Талдыкорган', '12_22': 'Кокшетау', '12_48': 'Тараз', '12_23': 'Костанай', '12_49': 'Текели', '12_24': 'Кульсары', '12_50': 'Темир', '12_25': 'Курчатов', '12_51': 'Темиртау', '13_0': 'Туркестан', '13_26': 'Белколь', '13_1': 'Уральск', '13_27': 'Бестобе', '13_2': 'Усть-Каменогорск', '13_28': 'Ботакара', '13_3': 'Ушарал', '13_29': 'Горняцкий', '13_4': 'Уштобе', '13_30': 'Гульшат', '13_5': 'Форт-Шевченко', '13_31': 'Деркул', '13_6': 'Хромтау', '13_32': 'Долинка', '13_7': 'Шалкар', '13_33': 'Жайрем', '13_8': 'Шар', '13_34': 'Жезказган', '13_9': 'Шардара', '13_35': 'Заводской', '13_10': 'Шахтинск', '13_36': 'Затобольск', '13_11': 'Шемонаиха', '13_37': 'Зачаганск', '13_12': 'Шу', '13_38': 'Индерборский', '13_13': 'Шымкент', '13_39': 'Карабалык', '13_14': 'Щучинск', '13_40': 'Качар', '13_15': 'Экибастуз', '13_41': 'Киевка', '13_16': 'Эмба', '13_42': 'Конырат', '13_17': 'Hоводолинский', '13_43': 'Круглоозерное', '13_18': 'Айтеке би', '13_44': 'Ленинский', '13_19': 'Аксу', '13_45': 'Макат', '13_20': 'Аксу', '13_46': 'Октябрьский', '13_21': 'Актас', '13_47': 'Осакаровка', '13_22': 'Актау', '13_48': 'Отеген батыра', '13_23': 'Аршалы', '13_49': 'Сарыколь', '13_24': 'Атасу', '13_50': 'Сарыозек', '13_25': 'Балпык', '13_51': 'Саяк',
+            '0_0': 'Шёл человек.', '0_26': 'Шёл степью, ', '0_1': 'долго, долго.', '0_27': 'Куда? Зачем?', '0_2': 'Нам это ', '0_28': 'не узнать.', '0_3': 'В густой лощине ', '0_29': 'он увидел волка,', '0_4': 'Верней, волчицу,', '0_30': 'А, точнее, мать...', '0_5': 'Она лежала в ', '0_31': 'зарослях полыни,', '0_6': 'Откинув лапы ', '0_32': 'и оскалив пасть.', '0_7': 'Из горла ', '0_33': 'перехваченного плыла', '0_8': 'Толчками кровь, ', '0_34': 'густая, словно грязь.', '0_9': 'Кем? Кем? Волкoм? ', '0_35': 'Охотничьими псами?', '0_10': 'Слепым волчатам ', '0_36': 'это не узнать.', '0_11': 'Они, толкаясь ', '0_37': 'и ворча, сосали', '0_12': 'Большую ', '0_38': 'неподатливую мать.', '0_13': 'Голодные волчата ', '0_39': 'позабыли,', '0_14': 'Как властно пахнет ', '0_40': 'в зарослях укроп.', '0_15': 'Они, прижавшись ', '0_41': 'к маме, жадно пили', '0_16': 'Густую холодеющую ', '0_42': 'кровь.', '0_17': 'С глотками в них ', '0_43': 'входила жажда мести.', '0_18': 'Кому? Любому.', '0_44': 'Лишь бы не простить.', '0_19': 'И будут мстить', '0_45': 'В отдельности,', '0_20': 'Не вместе.', '0_46': 'А встретятся –', '0_21': 'Друг другу ', '0_47': 'будут мстить.', '0_22': 'И человек пошёл ', '0_48': 'своей дорогой.', '0_23': 'Куда?.. Зачем?..', '0_49': 'Нам это не узнать.', '0_24': 'Он был волчатник,', '0_50': 'Но волчат не тронул,', '0_25': 'Ребят уже не ', '0_51': 'защищала мать...', '1_0': 'Догони меня, ', '1_26': 'джигит,', '1_1': 'Не жалей коня, ', '1_27': 'джигит.', '1_2': 'Если ', '1_28': 'ты ', '1_3': 'влюблён ', '1_29': 'и ловок,', '1_4': 'Конь догонит, ', '1_30': 'добежит.', '1_5': 'Я люблю тебя, ', '1_31': 'джигит.', '1_6': 'Догони же,', '1_32': 'Поцелуй,', '1_7': 'Голос ', '1_33': 'от ', '1_8': 'стыда ', '1_34': 'дрожит', '1_9': 'Среди этих ', '1_35': 'звонких струй.', '1_10': 'Меня ветер ', '1_36': 'обгоняет.', '1_11': 'На груди ', '1_37': 'моей лежит,', '1_12': 'Обнимает, ', '1_38': 'обнимает,', '1_13': 'Ой, ', '1_39': 'опять ', '1_14': 'отстал ', '1_40': 'джигит!', '1_15': 'Издевается ', '1_41': 'луна,', '1_16': 'Я одна.', '1_42': 'Опять одна,', '1_17': 'Мои руки ', '1_43': 'побелели,', '1_18': 'Кровь ', '1_44': 'по ', '1_19': 'крупу ', '1_45': 'скакуна,', '1_20': 'Злые ', '1_46': 'люди,', '1_21': 'Злые ', '1_47': 'люди,', '1_22': 'Вы обидели ', '1_48': 'меня.', '1_23': 'Дали смелому ', '1_49': 'джигиту,', '1_24': 'И красивому ', '1_50': 'джигиту', '1_25': 'Ишака,', '1_51': 'А не коня!..', '2_0': 'Я верю, ', '2_26': 'обещаю верить,', '2_1': 'Хоть сам того ', '2_27': 'не испытал,', '2_2': 'Что мог монах ', '2_28': 'не лицемерить', '2_3': 'И жить, как ', '2_29': 'клятвой обещал;', '2_4': 'Что поцелуи ', '2_30': 'и улыбки', '2_5': 'Людей коварны ', '2_31': 'не всегда,', '2_6': 'Что ближних ', '2_32': 'малые ошибки', '2_7': 'Они прощают ', '2_33': 'иногда,', '2_8': 'Что время лечит ', '2_34': 'от страданья,', '2_9': 'Что мир для ', '2_35': 'счастья сотворен,', '2_10': 'Что добродетель ', '2_36': 'не названье', '2_11': 'И жизнь поболее, ', '2_37': 'чем сон!..', '2_12': 'Но вере ', '2_38': 'теплой ', '2_13': 'опыт ', '2_39': 'хладный', '2_14': 'Противуречит ', '2_40': 'каждый миг,', '2_15': 'И ум, как прежде ', '2_41': 'безотрадный,', '2_16': 'Желанной цели ', '2_42': 'не достиг;', '2_17': 'И сердце, ', '2_43': 'полно сожалений,', '2_18': 'Хранит в себе ', '2_44': 'глубокий след', '2_19': 'Умерших, но ', '2_45': 'святых видений –', '2_20': 'И тени чувств, ', '2_46': 'каких уж нет;', '2_21': 'Его ничто ', '2_47': 'не испугает,', '2_22': 'И то, ', '2_48': 'что ', '2_23': 'было б ', '2_49': 'яд другим,', '2_24': 'Его живит, ', '2_50': 'его питает', '2_25': 'Огнем ', '2_51': 'язвительным своим.', '3_0': 'Зачем я не птица, ', 
+            '3_26': 'не ворон степной,', '3_1': 'Пролетевший ', '3_27': 'сейчас надо мной?', '3_2': 'Зачем не могу ', '3_28': 'в небесах я парить', '3_3': 'И одну лишь ', '3_29': 'свободу любить?', '3_4': 'На запад, на запад ', '3_30': 'помчался бы я,', '3_5': 'Где цветут моих ', '3_31': 'предков поля,', '3_6': 'Где в замке пустом, ', '3_32': 'на туманных горах,', '3_7': 'Их забвенный ', '3_33': 'покоится прах.', '3_8': 'На древней стене ', '3_34': 'их наследственный щит', '3_9': 'И заржавленный ', '3_35': 'меч их висит.', '3_10': 'Я стал ', '3_36': 'бы летать ', '3_11': 'над мечом ', '3_37': 'и щитом', '3_12': 'И смахнул бы я ', '3_38': 'пыль с них крылом;', '3_13': 'И арфы шотландской ', '3_39': 'струну бы задел,', '3_14': 'И по сводам бы ', '3_40': 'звук полетел;', '3_15': 'Внимаем одним, ', '3_41': 'и одним пробужден,', '3_16': 'Как раздался, так ', '3_42': 'смолкнул бы он.', '3_17': 'Но тщетны мечты, ', '3_43': 'бесполезны мольбы', '3_18': 'Против строгих ', '3_44': 'законов судьбы.', '3_19': 'Меж мной и холмами ', '3_45': 'отчизны моей', '3_20': 'Расстилаются ', '3_46': 'волны морей.', '3_21': 'Последний потомок ', '3_47': 'отважных бойцов', '3_22': 'Увядает средь ', '3_48': 'чуждых снегов;', '3_23': 'Я здесь ', '3_49': 'был рожден, ', '3_24': 'но нездешний ', '3_50': 'душой…', '3_25': 'О! Зачем я ', '3_51': 'не ворон степной?..', '4_0': 'Сквозь волнистые ', '4_26': 'туманы', '4_1': 'Пробирается ', '4_27': 'луна,', '4_2': 'На печальные ', '4_28': 'поляны', '4_3': 'Льет печально ', '4_29': 'свет она.', '4_4': 'По дороге зимней, ', '4_30': 'скучной', '4_5': 'Тройка борзая ', '4_31': 'бежит,', '4_6': 'Колокольчик ', '4_32': 'однозвучный', '4_7': 'Утомительно ', '4_33': 'гремит.', '4_8': 'Что-то слышится ', '4_34': 'родное', '4_9': 'В долгих ', '4_35': 'песнях ямщика:', '4_10': 'То разгулье удалое,', '4_36': 'То сердечная тоска…', '4_11': 'Ни огня, ', '4_37': 'ни черной хаты,', '4_12': 'Глушь и снег… ', '4_38': 'Навстречу мне', '4_13': 'Только версты полосаты', '4_39': 'Попадаются одне…', '4_14': 'Скучно, грустно… ', '4_40': 'Завтра, Нина,', '4_15': 'Завтра к милой ', '4_41': 'возвратясь,', '4_16': 'Я забудусь ', '4_42': 'у камина,', '4_17': 'Загляжусь ', '4_43': 'не наглядясь.', '4_18': 'Звучно стрелка ', '4_44': 'часовая', '4_19': 'Мерный круг ', '4_45': 'свой совершит,', '4_20': 'И, докучных ', '4_46': 'удаляя,', '4_21': 'Полночь нас ', '4_47': 'не разлучит.', '4_22': 'Грустно, Нина: ', '4_48': 'путь мой скучен,', '4_23': 'Дремля смолкнул ', '4_49': 'мой ямщик,', '4_24': 'Колокольчик ', '4_50': 'однозвучен,', '4_25': 'Отуманен ', '4_51': 'лунный лик.', '5_0': 'Прошло пять лет,— ', '5_26': 'и залечила раны,', '5_1': 'Жестокой ', '5_27': 'нанесенные войной,', '5_2': 'Страна моя,', '5_28': 'и русские поляны', '5_3': 'Опять полны ', '5_29': 'студеной тишиной.', '5_4': 'И маяки сквозь ', '5_30': 'мрак приморской ночи,', '5_5': 'Путь указуя ', '5_31': 'моряку, горят.', '5_6': 'На их огонь, ', '5_32': 'как в дружеские очи,', '5_7': 'Далеко с моря ', '5_33': 'моряки глядят.', '5_8': 'Где танк ', '5_34': 'гремел — ', '5_9': 'там ныне ', '5_35': 'мирный трактор,', '5_10': 'Где выл пожар — ', '5_36': 'благоухает сад,', '5_11': 'И по изрытому ', '5_37': 'когда-то тракту', '5_12': 'Автомобили ', '5_38': 'легкие летят.', '5_13': 'Где елей ', '5_39': 'искалеченные руки', '5_14': 'Взывали к мщенью — ', '5_40': 'зеленеет ель,', '5_15': 'И там, где сердце ', '5_41': 'ныло от разлуки,—', '5_16': 'Там мать поет, ', '5_42': 'качая колыбель.', '5_17': 'Ты стала вновь ', '5_43': 'могучей и свободной,', '5_18': 'Страна ', '5_44': 'моя!', '5_19': 'Но живы ', '5_45': 'навсегда', '5_20': 'В сокровищнице ', '5_46': 'памяти народной', '5_21': 'Войной ', '5_47': 'испепеленные года.',
+            '5_22': 'Для мирной жизни ', '5_48': 'юных поколений,', '5_23': 'От Каспия и ', '5_49': 'до полярных льдов,', '5_24': 'Как памятники ', '5_50': 'выжженных селений,', '5_25': 'Встают громады ', '5_51': 'новых городов.', '6_0': 'О доблестях, ', '6_26': 'о подвигах, о славе', '6_1': 'Я забывал на ', '6_27': 'горестной земле,', '6_2': 'Когда твое лицо ', '6_28': 'в простой оправе', '6_3': 'Перед мной ', '6_29': 'сияло на столе.', '6_4': 'Но час настал, ', '6_30': 'и ты ушла из дому.', '6_5': 'Я бросил в ночь ', '6_31': 'заветное кольцо.', '6_6': 'Ты отдала свою ', '6_32': 'судьбу другому,', '6_7': 'И я забыл ', '6_33': 'прекрасное лицо.', '6_8': 'Летели дни, крутясь ', '6_34': 'проклятым роем…', '6_9': 'Вино и страсть ', '6_35': 'терзали жизнь мою…', '6_10': 'И вспомнил я тебя ', '6_36': 'пред аналоем,', '6_11': 'И звал ', '6_37': 'тебя, ', '6_12': 'как молодость ', '6_38': 'свою…', '6_13': 'Я звал тебя, ', '6_39': 'но ты не оглянулась,', '6_14': 'Я слезы лил, ', '6_40': 'но ты не снизошла.', '6_15': 'Ты в синий плащ ', '6_41': 'печально завернулась,', '6_16': 'В сырую ночь ', '6_42': 'ты из дому ушла.', '6_17': 'Не знаю, где приют ', '6_43': 'твоей гордыне', '6_18': 'Ты, милая, ты, ', '6_44': 'нежная, нашла…', '6_19': 'Я крепко ', '6_45': 'сплю, ', '6_20': 'мне снится плащ ', '6_46': 'твой синий,', '6_21': 'В котором ты ', '6_47': 'в сырую ночь ушла…', '6_22': 'Уж не мечтать ', '6_48': 'о нежности, о славе,', '6_23': 'Все миновалось, ', '6_49': 'молодость прошла!', '6_24': 'Твое лицо в его ', '6_50': 'простой оправе', '6_25': 'Своей рукой убрал ', '6_51': 'я со стола.', '7_0': 'Прекрасно в нас ', '7_26': 'влюбленное вино', '7_1': 'И добрый ', '7_27': 'хлеб, ', '7_2': 'что в печь ', '7_28': 'для нас садится,', '7_3': 'И женщина, ', '7_29': 'которою дано,', '7_4': 'Сперва измучившись, ', '7_30': 'нам насладиться.', '7_5': 'Но что нам делать ', '7_31': 'с розовой зарей', '7_6': 'Над холодеющими ', '7_32': 'небесами,', '7_7': 'Где тишина ', '7_33': 'и неземной покой,', '7_8': 'Что делать нам с ', '7_34': 'бессмертными стихами?', '7_9': 'Ни съесть, ни выпить, ', '7_35': 'ни поцеловать.', '7_10': 'Мгновение бежит ', '7_36': 'неудержимо,', '7_11': 'И мы ломаем руки, ', '7_37': 'но опять', '7_12': 'Осуждены идти ', '7_38': 'всё мимо, мимо.', '7_13': 'Как мальчик, ', '7_39': 'игры позабыв свои,', '7_14': 'Следит порой за ', '7_40': 'девичьим купаньем', '7_15': 'И, ничего ', '7_41': 'не зная о любви,', '7_16': 'Все ж мучится ', '7_42': 'таинственным желаньем;', '7_17': 'Как некогда в ', '7_43': 'разросшихся хвощах', '7_18': 'Ревела от ', '7_44': 'сознания бессилья', '7_19': 'Тварь скользкая, ', '7_45': 'почуя на плечах', '7_20': 'Еще не появившиеся ', '7_46': 'крылья;', '7_21': 'Так век ', '7_47': 'за веком — ', '7_22': 'скоро ли, ', '7_48': 'Господь? —', '7_23': 'Под скальпелем ', '7_49': 'природы и искусства', '7_24': 'Кричит наш дух, ', '7_50': 'изнемогает плоть,', '7_25': 'Рождая орган для ', '7_51': 'шестого чувства.', '8_0': 'Я входил вместо ', '8_26': 'дикого зверя в клетку,', '8_1': 'выжигал свой ', '8_27': 'срок ', '8_2': 'и кликуху гвоздем ', '8_28': 'в бараке,', '8_3': 'жил у моря, ', '8_29': 'играл в рулетку,', '8_4': 'обедал черт знает ', '8_30': 'с кем во фраке.', '8_5': 'С высоты ледника ', '8_31': 'я озирал полмира,', '8_6': 'трижды тонул, ', '8_32': 'дважды бывал распорот.', '8_7': 'Бросил страну, ', '8_33': 'что меня вскормила.', '8_8': 'Из забывших меня ', '8_34': 'можно составить город.', '8_9': 'Я слонялся в степях,', '8_35': 'помнящих вопли гунна,', '8_10': 'надевал на себя что ', '8_36': 'сызнова входит в моду,', '8_11': 'сеял рожь, покрывал ', '8_37': 'черной толью гумна', '8_12': 'и не пил только ', '8_38': 'сухую воду.', '8_13': 'Я впустил ', '8_39': 'в свои сны ', 
+           '8_14': 'вороненый зрачок ', '8_40': 'конвоя,', '8_15': 'жрал хлеб ', '8_41': 'изгнанья, ', '8_16': 'не оставляя ', '8_42': 'корок.', '8_17': 'Позволял своим ', '8_43': 'связкам ', '8_18': 'все звуки, ', '8_44': 'помимо воя;', '8_19': 'перешел на шепот. ', '8_45': 'Теперь мне сорок.', '8_20': 'Что сказать мне ', '8_46': 'о жизни? ', '8_21': 'Что оказалась ', '8_47': 'длинной.', '8_22': 'Только с горем я ', '8_48': 'чувствую солидарность.', '8_23': 'Но пока мне рот ', '8_49': 'не забили глиной,', '8_24': 'из него ', '8_50': 'раздаваться ', '8_25': 'будет лишь ', '8_51': 'благодарность.', '9_0': 'Снуют пунцовые ', '9_26': 'стрекозы,', '9_1': 'Летят шмели ', '9_27': 'во все концы,', '9_2': 'Колхозницы ', '9_28': 'смеются с возу,', '9_3': 'Проходят с ', '9_29': 'косами косцы.', '9_4': 'Пока хорошая ', '9_30': 'погода,', '9_5': 'Гребут и ', '9_31': 'ворошат корма', '9_6': 'И складывают ', '9_32': 'до захода', '9_7': 'В стога, ', '9_33': 'величиной с дома.', '9_8': 'Стог принимает ', '9_34': 'на закате', '9_9': 'Вид постоялого ', '9_35': 'двора,', '9_10': 'Где ночь ', '9_36': 'ложится на полати', '9_11': 'В накошенные ', '9_37': 'клевера.', '9_12': 'К утру, когда ', '9_38': 'потемки реже,', '9_13': 'Стог высится, ', '9_39': 'как сеновал,', '9_14': 'В котором ', '9_40': 'месяц мимоезжий,', '9_15': 'Зарывшись, ', '9_41': 'переночевал.', '9_16': 'Чем свет телега ', '9_42': 'за телегой', '9_17': 'Лугами катятся ', '9_43': 'впотьмах.', '9_18': 'Наставший ', '9_44': 'день ', '9_19': 'встает с ', '9_45': 'ночлега', '9_20': 'С трухой и ', '9_46': 'сеном в волосах.', '9_21': 'А в ', '9_47': 'полдень ', '9_22': 'вновь синеют ', '9_48': 'выси,', '9_23': 'Опять стога, ', '9_49': 'как облака,', '9_24': 'Опять, как ', '9_50': 'водка на анисе,', '9_25': 'Земля душиста ', '9_51': 'и крепка.'}
+        
+    
+
+        var npsTable = document.getElementById("npsTable").firstChild;
+       
+        getNewData();
+        function getNewData(user, newdata) {
+            var sendata = {};
+            if (user != undefined) {
+                sendata.who_changed = user;
+            }
+            if (newdata != undefined) {
+                sendata.chended_numbers = newdata;
+            }
+            $.ajax({
+                url: 'http://localhost:5005/regionOCRModeration',
+                dataType: 'json',
+                data: sendata,
+                async: false, 
+                cache: false,
+                type: 'post',
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.log(textStatus);
+                    console.log(errorThrown);
+                },
+                success: function (response) {
+                    var res = response;
+                    USER = res.user;
+                    if (response.message == undefined) {
+                        var expectModeration = response.expectModeration;
+
+                        var infoBox = document.getElementById("infoBox");
+                        var info_p = document.createElement("p");
+                        var info_text = document.createTextNode("Expect moderation: " + expectModeration);
+                        info_p.appendChild(info_text);
+                        while (infoBox.firstChild) {
+                            infoBox.removeChild(infoBox.firstChild);
+                        }
+                        infoBox.appendChild(info_p);
+
+                        response = response.data;
+                        for (var i in response) {
+                            var item = response[i];
+                            var tr = document.createElement("tr");
+                            var td = document.createElement("td");
+                            td.className = "text-center";
+                            var old_predict = (item.name).split(/[- ]+/).pop();
+                            var forcheck = old_predict.split('_',2)
+                            var file_name = 'class_indexes_'+forcheck[0]+'.txt';
+
+                            old_predict = dic[forcheck[0]+'_'+forcheck[1]]
+
+                            var div = document.createElement("div");
+                            div.className = "NP editNumberplate";
+                            div.id = item.name;
+                            div.dataset.description = item.description || old_predict;
+                            
+                            var cl_name = document.createElement("p");
+                            cl_name.className = "Class name"
+                            var b1 = document.createElement("b");
+                            var b1Text = document.createTextNode(item.name);
+                            b1.appendChild(b1Text);
+                            cl_name.appendChild(b1);
+                            td.appendChild(cl_name);
+
+                            npH1Redraw(div, item.description || old_predict);
+                            td.appendChild(div);
+                            if ((item.predicted || "").length) {
+                                var p = document.createElement("p");
+                                p.className = "predicted";
+                                var pText = document.createTextNode("predicted: ");
+                                p.appendChild(pText);
+
+                                var b = document.createElement("b");
+                                var bText = document.createTextNode(item.predicted);
+                                b.appendChild(bText);
+                                p.appendChild(b);
+
+                                td.appendChild(p);
+                            }
+
+                            
+                            var div_crop = document.createElement("div");
+                            div_crop.className = "crop_img"
+                            div_crop.id = item.name;
+                            var img = document.createElement("img");
+                            img.src = item.img_path;
+                            img.width = "295";
+                            img.height = "64";
+                            // var input3 = document.createElement("input");
+                            // input3.type = "checkbox";
+                            // input3.className = "croped";
+                            
+                            var p_img = document.createElement("p");
+                            p_img.style.display = "none";
+                            p_img.className = "p_img";
+                            div_crop.appendChild(p_img);
+                            //div_crop.appendChild(input3);
+                            div_crop.appendChild(img);
+                            td.appendChild(div_crop);
+                            tr.appendChild(td);
+
+                            var td0 = document.createElement("td");
+                            td0.className = "optionTD";
+                            for (var opt in res.options) {
+                                drawCat(td0, item[opt], res.options[opt], opt);
+                            }
+                            tr.appendChild(td0);
+
+                            var td2 = document.createElement("td");
+                            td2.className = "deleteTD";
+                            var input2 = document.createElement("input");
+                            
+                            input2.setAttribute("tabindex", "-1");
+                            input2.type = "checkbox";
+                            input2.className = "del";
+                            input2.title = "Mark for removing";
+
+                            td2.appendChild(input2);
+                            tr.appendChild(td2);
+                            
+
+                            npsTable.appendChild(tr);
+
+
+                        }
+                        
+                        $("img").click(function clickEvent(e){
+                            if (e.currentTarget.parentNode.children[2]){
+                                e.currentTarget.parentNode.children[2].style.display = "";
+                            }
+                            
+                            e.currentTarget.style.display = "none";
+                            while (e.currentTarget.firstChild) {
+                                e.currentTarget.removeChild(e.currentTarget.firstChild);
+                            }
+                            var vanillaSave = document.querySelector('.vanilla-save');
+                            var el = e.currentTarget.parentNode;
+                            var resize = new Croppie(el, {
+                                viewport: { width: 295, height: 64 },
+                                boundary: { width: 310, height: 85 },
+                                showZoomer: false,
+                                enableResize: true,
+                                enableOrientation: true,
+                                mouseWheelZoom: 'ctrl'
+                            });
+                            resize.bind({
+                                url: e.currentTarget.src
+                            });
+                            //on button click
+                            
+                            el.addEventListener('contextmenu', function (ev) {
+                                e.currentTarget.style.display = "";
+                                
+                                var res_base64 = ''
+                                //alert('resize update', ev);
+                                resize.result('base64', 'viewport', 'jpg').then(function(result) {
+                                    alert(result.length)
+                                    e.currentTarget.src=result;
+                                    e.currentTarget.parentNode.firstChild.innerHTML=result;
+                                    e.currentTarget.parentNode.children[2].style.display = "none";
+                                });
+                                //console.log(res_base64);
+
+                            });
+
+                            
+
+                        });
+                        
+
+                        $("div.NP").click(function clickEvent(e){
+                            if (e.currentTarget.childNodes.length && e.currentTarget.childNodes[0].nodeName != "INPUT") {
+                                var input = document.createElement("input");
+                                input.className = "NewNumber numberplate";
+                                input.value = e.currentTarget.childNodes[0].innerText;
+                                input.id = "target";
+
+                                while (e.currentTarget.firstChild) {
+                                    e.currentTarget.removeChild(e.currentTarget.firstChild);
+                                }
+
+                                e.currentTarget.appendChild(input);
+                                input.focus();
+
+                                //input.addEventListener("input", function(e){
+                                //    e.target.value = e.target.value.toUpperCase();
+                                //});
+
+                                input.addEventListener("blur", function(e){
+                                    if (e.target.value != e.target.parentNode.dataset.description) {
+                                        e.target.parentNode.className += " edited";
+                                    }
+                                    npInputRedraw(e.target.parentNode, e.target.value);
+                                });
+                            }
+                        });
+
+                        $("input.del").click(function clickEvent(e){
+                            if (e.currentTarget.checked) {
+                                e.currentTarget.parentNode.parentNode.className = "forDelete";
+                            } else {
+                                e.currentTarget.parentNode.parentNode.className = "";
+                            }
+                        });
+
+                    } else {
+                        var infoBox = document.getElementById("infoBox");
+                        var info_p = document.createElement("p");
+                        info_p.className = "warnings";
+                        var info_text = document.createTextNode("Warning: " + response.message);
+                        info_p.appendChild(info_text);
+                        while (infoBox.firstChild) {
+                            infoBox.removeChild(infoBox.firstChild);
+                        }
+                        infoBox.appendChild(info_p);
+                    }
+                }
+            });
+        }
+
+        document.addEventListener("keypress", function (e) {
+            if(e.code == "Enter" || e.code == "Numpad2") {
+                event.preventDefault();
+                var target = document.getElementById("target");
+                if (target != null) {
+                    target.scrollIntoView();
+                    var next = target.parentNode.parentNode.parentNode.nextElementSibling;
+                    target.blur();
+                    if (next != null) {
+                        //console.log(next);
+                        next = next.firstChild.firstChild;
+                        next.click();
+                    }
+                    return false;
+                }
+            }
+            if(e.code == "NumpadDecimal") {
+                event.preventDefault();
+                var target = document.getElementById("target");
+                if (target != null) {
+                    target.parentNode.parentNode.nextElementSibling.nextElementSibling.firstChild.click();
+                    target.scrollIntoView();
+                    var next = target.parentNode.parentNode.parentNode.nextElementSibling;
+                    target.blur();
+                    if (next != null) {
+                        //console.log(next);
+                        next = next.firstChild.firstChild;
+                        next.click();
+                    }
+                    return false;
+                }
+            }
+            if(e.code == "Numpad8") {
+                event.preventDefault();
+                var target = document.getElementById("target");
+                if (target != null) {
+                    var prev = target.parentNode.parentNode.parentNode.previousElementSibling;
+                    target.blur();
+                    if (prev != null) {
+                        prev.scrollIntoView();
+                        prev = prev.firstChild.firstChild;
+                        prev.click();
+                    }
+                    return false;
+                }
+            }
+            //if (e.keyCode == 5) {
+            //    evt.preventDefault();
+            //    evt.stopPropagation();
+            //}
+        });
+
+        $("#reset").click(function(e){
+            e.preventDefault();
+            while (npsTable.firstChild) {
+                npsTable.removeChild(npsTable.firstChild);
+            }
+            getNewData();
+            return false;
+        });
+        $("#loadNext").click(function(e){
+            e.preventDefault();
+
+            var divs = document.getElementsByClassName("NP");
+            var div_vrops = document.getElementsByClassName("crop_img")
+            var newdata = [];
+            for (var i in divs) {
+                var d = divs[i];
+                var cr = div_vrops[i]
+                var name = d.id;
+                if (d.id != undefined) {
+                    var discription = d.childNodes[0].textContent.trim();
+                    base64_str = cr.firstChild.innerHTML;
+                    let compressedImg = base64_str.split('').reduce((o, c) => {
+                        if (o[o.length - 2] === c && o[o.length - 1] < 35) o[o.length - 1]++;
+                        else o.push(c, 0);
+                        return o;
+                    },[]).map(_ => typeof _ === 'number' ? _.toString(36) : _).join('');
+                    var b1 = base64_str.substring(0, base64_str.length/2);
+                    var b2 = base64_str.substring(base64_str.length/2, base64_str.length);
+                    console.log(b1.length)
+                    console.log(b2.length)
+                    console.log(compressedImg.length)
+                    var item_data = {
+                        "number": name.trim(),
+                        "newNumber": discription == "_" ? undefined : discription,
+                        "deleted": d.parentNode.parentNode.lastChild.firstChild.checked ? 1 : 0,
+                        "croped": base64_str
+                    };
+                    for (var item of d.parentNode.parentNode.childNodes[1].childNodes) {
+                        item = item.firstChild;
+                        item_data[item.firstChild.firstChild.textContent] = +item[item.selectedIndex].value;
+                    }
+                    //console.log(item_data);
+                    newdata.push(item_data);
+                }
+            }
+            while (npsTable.firstChild) {
+                npsTable.removeChild(npsTable.firstChild);
+            }
+            getNewData(USER, newdata);
+            return false;
+        });
+    });
+</script>
+</body>
+</html>
